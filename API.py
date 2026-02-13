@@ -13,49 +13,51 @@ df = pd.read_csv('data.csv')
 def index():
     return "Welcome to my API! Check the README for usage."
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
 @app.route('/data', methods=['GET'])
 def list_records():
-    # 1. 复制一份数据，以免修改原始数据
+    # 1. 复制数据
     results = df.copy()
 
-    # 2. 过滤 (Filtering)
-    # 遍历 URL 中的参数，如果在 CSV 列名中，就进行过滤
+    # 2. 智能过滤 (基于你的 loans_A_labeled.csv)
+    # 遍历 URL 里的所有参数 (比如 ?country=Peru&sector=Food)
     for key, value in request.args.items():
+        # 跳过控制参数，只处理数据列名
+        if key in ['limit', 'offset', 'format']:
+            continue
+            
+        # 只有当参数名确实是 CSV 里的列名时才过滤
         if key in results.columns:
-            # 注意：这里的数据类型可能需要转换，CSV读取通常是数字，但URL参数是字符串
-            # 为了简单起见，这里假设做字符串比较，或者你可以尝试转换类型
+            # 核心技巧：把 DataFrame 这一列临时转成字符串 (astype(str)) 再对比
+            # 这样既能处理文本 (Peru)，也能处理数字 (575)，不会报错
             results = results[results[key].astype(str) == value]
 
-    # 3. 分页 (Pagination - Limit & Offset)
-    limit = request.args.get('limit', type=int)
-    offset = request.args.get('offset', default=0, type=int)
+    # 3. 分页 (Pagination)
+    try:
+        limit = int(request.args.get('limit', 10000)) # 默认给个大数，或者默认10
+        offset = int(request.args.get('offset', 0))
+    except ValueError:
+        limit = 10000
+        offset = 0
     
-    if limit:
+    # 检查切片是否越界，虽然 Python 切片越界不会报错，但逻辑上要注意
+    if offset < len(results):
         results = results[offset : offset + limit]
     else:
-        results = results[offset:]
+        results = results[0:0] # 如果 offset 太大，返回空
 
-    # 4. 格式化输出 (Format: JSON vs CSV)
+    # 4. 格式化输出 (CSV / JSON)
     output_format = request.args.get('format', 'json').lower()
 
     if output_format == 'csv':
-        # 使用 Pandas 的 to_csv
-        csv_output = results.to_csv(index=False)
-        # 创建响应对象，设置正确的 Content-Type
         return Response(
-            csv_output,
+            results.to_csv(index=False),
             mimetype="text/csv",
             headers={"Content-disposition": "attachment; filename=data.csv"}
         )
-    
-    else: # 默认为 JSON
-        # 使用 Pandas 的 to_json
-        # orient='records' 会生成 [{"id":1...}, {"id":2...}] 的格式
-        json_output = results.to_json(orient='records')
-        return Response(json_output, mimetype='application/json')
+    else:
+        # JSON 格式
+        return Response(results.to_json(orient='records'), mimetype='application/json')
     
 
 @app.route('/data/<id>', methods=['GET'])
@@ -75,3 +77,7 @@ def get_record(id):
     
     # 返回单条记录的 JSON
     return Response(record.to_json(orient='records'), mimetype='application/json')
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
