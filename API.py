@@ -4,10 +4,11 @@ import io
 import pandas as pd
 from flask import Flask, Response, jsonify, make_response, request
 
+from data_clean import load_and_clean_data
+
 app = Flask(__name__)
 
-
-df = pd.read_csv("data.csv")
+df = load_and_clean_data("data.csv")
 
 
 @app.route("/")
