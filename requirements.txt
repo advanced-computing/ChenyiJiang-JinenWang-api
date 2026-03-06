@@ -8,6 +8,7 @@ requests
 numpy
 flask
 ydata_profiling
+duckdb
 
 # needed for plotly
 nbformat
