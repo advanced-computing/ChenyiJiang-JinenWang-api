@@ -1,9 +1,9 @@
 # Loan Data API
 
-This is a simple RESTful API built with Flask that provides access to the Kiva Loans dataset. It follows **Documentation-Driven Development** principles.
+This is a RESTful API built with Flask that provides access to the Kiva Loans dataset. It follows **Documentation-Driven Development** principles and utilizes a **DuckDB persistent database** for efficient data querying and storage.
 
-## Dataset
-The API is powered by `data.csv`, containing loan applications with unique identifiers (`id`), borrower names, sectors, countries, and loan amounts.
+## Dataset & Database
+The API is powered by a DuckDB database (`my_database.db`). The core loan data is initialized from `data.csv`, containing loan applications with unique identifiers (`id`), borrower names, sectors, countries, and loan amounts. It also features a `users` table to track API consumers.
 
 ## Setup & Installation
 
@@ -16,12 +16,19 @@ The API is powered by `data.csv`, containing loan applications with unique ident
 2.  **Install dependencies:**
     You need Python 3 installed. Then run:
     ```bash
-    pip install flask pandas
+    pip install flask pandas duckdb
     ```
 
-3.  **Run the application:**
+3.  **Initialize the database:**
+    Before running the API for the first time, you must create the persistent database and load the initial data.
     ```bash
-    python app.py
+    python init_db.py
+    ```
+    *(This will generate a `my_database.db` file in your directory).*
+
+4.  **Run the application:**
+    ```bash
+    python api.py
     ```
     The API will start at `http://127.0.0.1:5000/`.
 
@@ -42,15 +49,12 @@ Retrieve a list of loans. You can filter by column, paginate results, and choose
 | `limit` | `int` | `10000` | Number of records to return. |
 | `offset` | `int` | `0` | Number of records to skip (pagination). |
 | `format` | `string` | `json` | Output format: `json` or `csv`. |
-| `<column>` | `string` | - | Filter by any column (e.g., `country=Peru`, `age=30`). |
+| `<column>` | `string` | - | Filter by any column (e.g., `country=Peru`, `sector=Agriculture`). |
 
 #### Filter Examples
 
 **Filter by specific column (e.g., Country):**
 > `GET /data?country=Peru`
-
-**Filter by numerical value (e.g., Loan Amount):**
-> `GET /data?loan_amount=575`
 
 **Combined Filter (Sector + Country):**
 > `GET /data?sector=Agriculture&country=Kenya`
@@ -69,25 +73,28 @@ Retrieve details for a specific loan by its unique ID.
 * **Endpoint:** `/data/<id>`
 * **Method:** `GET`
 
-#### Parameters
-* `id`: The unique identifier of the loan (e.g., `350525`).
-
 #### Example
-
 **Get details for loan ID 350525:**
 > `GET /data/350525`
 
-**Response (JSON):**
-```json
-[
-  {
-    "id": 350525,
-    "name": "Jovita",
-    "gender": "F",
-    "loan_amount": 575,
-    "activity": "Agriculture",
-    "sector": "Agriculture",
-    "country": "Peru",
-    ...
-  }
-]
+---
+
+### 3. Add a New User
+Add a new user to the persistent database.
+
+* **Endpoint:** `/users`
+* **Method:** `POST`
+* **Headers:** `Content-Type: application/json`
+
+#### Request Body (JSON)
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `username` | `string` | Yes | The chosen username. |
+| `age` | `int` | Yes | The user's age. |
+| `country` | `string` | Yes | The user's country of residence. |
+
+#### Example cURL Request:
+```bash
+curl -X POST [http://127.0.0.1:5000/users](http://127.0.0.1:5000/users) \
+-H "Content-Type: application/json" \
+-d '{"username":"alex", "age":25, "country":"USA"}'
