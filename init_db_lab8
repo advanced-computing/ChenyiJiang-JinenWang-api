@@ -1,0 +1,26 @@
+import duckdb
+
+
+def init_database():
+    conn = duckdb.connect("cpi.db")
+
+    file_2024 = "PCPI24M1.csv"
+
+    print(f"Initializing database with {file_2024}...")
+
+    conn.sql(
+        f"CREATE TABLE cpi_append AS SELECT * FROM read_csv('{file_2024}', auto_detect=true)"
+    )
+    conn.sql(
+        f"CREATE TABLE cpi_trunc AS SELECT * FROM read_csv('{file_2024}', auto_detect=true)"
+    )
+    conn.sql(
+        f"CREATE TABLE cpi_inc AS SELECT * FROM read_csv('{file_2024}', auto_detect=true)"
+    )
+
+    print("✅ Initialized three identical tables: cpi_append, cpi_trunc, cpi_inc")
+    conn.close()
+
+
+if __name__ == "__main__":
+    init_database()
